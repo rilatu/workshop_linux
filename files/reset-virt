@@ -1,0 +1,11 @@
+#!/bin/bash
+
+if [[ $1 == 'server1' ]]; then
+  snapname = 'initial-s1'
+fi
+if [[ $1 == 'server2' ]]; then
+  snapname == 'initial-s2'
+fi
+
+virsh -c qemu:///system snapshot-revert $1 ${snapname}
+

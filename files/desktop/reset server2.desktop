@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=reset server2
+Comment=reset server2 to initial state
+Exec=/usr/local/bin/reset-virt server2
+Icon=system-reboot
+Path=~/
+Terminal=false
+StartupNotify=false
+

@@ -1,0 +1,88 @@
+#version=DEVEL
+# System authorization information
+auth --enableshadow --passalgo=sha512
+# Use CDROM installation media
+cdrom
+# Use graphical install
+text
+reboot
+# Run the Setup Agent on first boot
+firstboot --enable
+# Keyboard layouts
+keyboard --vckeymap=us --xlayouts='us'
+# System language
+lang en_US.UTF-8
+
+# Network information
+network  --bootproto=dhcp --device=eth0 --ipv6=ignore --activate --hostname={{item.name}}.example.com --onboot=yes
+network  --bootproto=static --device=eth1 --ipv6=ignore --activate --ip={{ item.ip }} --netmask=255.255.255.0 --gateway=192.168.253.1 --noipv6 --onboot=yes --nodefroute
+
+# Repo information
+repo --install --name="epel" --baseurl={{workshop_epel_base_url|default('https://download.fedoraproject.org/pub/epel/7/x86_64/')}}
+
+# Root password
+rootpw --iscrypted $6$jirXCymkNXpL0pYz$lnceH1yJVLoKnnWyofVhziTLxInlhR7jOdQemZk1yTI2yG39wGHtW0cumk4c5qL8sM0XgI8lriQtJGolUMC9U.
+# System services
+services --disabled="chronyd"
+# System timezone
+timezone Europe/Amsterdam --isUtc --nontp
+user --groups=wheel --name=student --password=$6$4DIYwvPg4amRIhMR$Xayk2MSG7wYWu5jWmRDUF74oLLoZ3H1pa98h2FGUta7uKe5tqcN7rPgpoMcDNQoOwu8fPgIqC0.Lid1PUBSfI0 --iscrypted --gecos="student user"
+# System bootloader configuration
+bootloader --location=mbr --boot-drive=vda
+# Partition clearing information
+clearpart --none --initlabel
+# Disk partitioning information
+part pv.157 --fstype="lvmpv" --ondisk=vda --size=9215
+part /boot --fstype="xfs" --ondisk=vda --size=1024
+volgroup centos_server1 --pesize=4096 pv.157
+logvol swap  --fstype="swap" --size=1023 --name=swap --vgname=centos_server1
+logvol /  --fstype="xfs" --grow --maxsize=51200 --size=1024 --name=root --vgname=centos_server1
+
+%packages
+@^minimal
+@core
+bash-completion
+bash-completion-extras
+open-vm-tools
+cifs-utils
+nfs-utils
+libselinux-python
+ntp
+rsync
+tcpdump
+wget
+git
+python-pip
+mlocate
+lsof
+htop
+sysstat
+screen
+pigz
+vim-enhanced
+python-dns
+yum-utils
+tmux
+nano
+%end
+
+%addon com_redhat_kdump --disable --reserve-mb='auto'
+%end
+
+%post
+mkdir /home/student/.ssh
+chown student: /home/student/.ssh
+chmod 0700 /home/student/.ssh
+cat << EOPUBKEY > /home/student/.ssh/authorized_keys
+{{pubkey.stdout}}
+EOPUBKEY
+chown student: /home/student/.ssh/authorized_keys
+chmod 0600 /home/student/.ssh/authorized_keys
+echo 'student ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/student
+rm -f /etc/yum.repos.d/CentOS-Base.repo
+rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-7
+cd /etc/pki/rpm-gpg/
+rpm --import https://download.docker.com/linux/centos/gpg
+rpm --import http://mirror.centos.org/centos/RPM-GPG-KEY-CentOS-7
+rpm --import https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-7
+%end

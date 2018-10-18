@@ -1,0 +1,314 @@
+- hosts: workshop
+  vars_files:
+    - vars.yaml
+  become: yes
+  tasks:
+  - name: add google repo
+    yum_repository:
+      name: google
+      description: google
+      baseurl: http://dl.google.com/linux/chrome/rpm/stable/x86_64
+      gpgcheck: 1
+      gpgkey: https://dl-ssl.google.com/linux/linux_signing_key.pub
+      state: present
+      file: google_chrome
+    tags:
+      - system
+  - name: list all installed packages
+    yum:
+      list: installed
+    register: installed_packages
+    tags:
+      - system
+  - set_fact:
+      installed_pkgs: "{{installed_packages.results|map(attribute='name')|list}}"
+    tags:
+      - system
+  - name: install packages
+    yum:
+      name: "{{item}}"
+      state: present
+    loop: "{{ workshop_packagelist | difference(installed_pkgs) }}"
+    tags:
+      - system
+  - name: drop xrdp config file
+    copy:
+      src: xrdp.ini
+      dest: /etc/xrdp/xrdp.ini
+    tags:
+      - system
+  - name: enable xrdp
+    service:
+      name: xrdp
+      enabled: yes
+      state: started
+    tags:
+      - system
+  - name: default runlevel 5
+    command: systemctl set-default graphical.target
+    changed_when: false
+    tags:
+      - system
+  - name: allow RDP
+    firewalld:
+      port: 3389/tcp
+      permanent: true
+      state: enabled
+    tags:
+      - system
+  - name: check for skel files
+    stat:
+      path: /etc/skel/.Xclients
+      get_checksum: no
+      get_mime: no
+    register: skel
+  - name: drop skeleton files
+    copy:
+      src: skel/
+      dest: /etc/skel/
+      mode: preserve
+    when: not skel.stat.exists
+    tags:
+      - system
+  - name: add user student
+    user:
+      name: student
+      groups:
+        - libvirt
+        - qemu
+        - wheel
+      password: $6$4DIYwvPg4amRIhMR$Xayk2MSG7wYWu5jWmRDUF74oLLoZ3H1pa98h2FGUta7uKe5tqcN7rPgpoMcDNQoOwu8fPgIqC0.Lid1PUBSfI0
+      generate_ssh_key: yes
+      ssh_key_bits: 2048
+      ssh_key_file: .ssh/id_rsa
+  - name: read public key
+    shell: cat /home/student/.ssh/id_rsa.pub
+    register: pubkey
+    changed_when: no
+# now we need to convert vfrom DHCP to static IPs
+  - name: drop resolv.conf
+    copy:
+      content: |
+        # Ansible Managed
+        search example.com
+        nameserver 8.8.8.8
+        nameserver 8.8.4.4
+      dest: /etc/resolv.conf
+      owner: root
+    tags:
+      - system
+  - name: drop network config
+    template:
+      backup: yes
+      dest: "/etc/sysconfig/network-scripts/ifcfg-{{ansible_default_ipv4.interface}}"
+      src: ifcfg_nic.j2
+    tags:
+      - system
+  - name: check if we're running dhcp
+    shell: "ps auxwww | awk '{print $11}'|grep dhclient"
+    ignore_errors: yes
+    changed_when: false
+    register: dhcp
+  - name: restart network
+    service:
+      name: network
+      state: restarted
+    when: dhcp.rc == 0
+    tags:
+      - system
+  - name: allow forwarding
+    sysctl:
+      name: net.ipv4.ip_forward
+      value: 1
+      reload: yes
+  - name: reboot the server
+    shell: sleep 2 && reboot
+    async: 1
+    poll: 0
+    ignore_errors: true
+    when: dhcp.rc == 0
+  - name: "Wait for the machine to be down"
+    local_action: wait_for
+    args:
+      host: "{{ ansible_ssh_host | default(inventory_hostname) }}"
+      port: 22
+      state: stopped
+      timeout: 10
+    become: false
+    ignore_errors: true
+    when: dhcp.rc == 0
+  - name: wait for the server to come back after reboot for new kernel
+    local_action: wait_for
+    args:
+      host: "{{ ansible_ssh_host | default(inventory_hostname) }}"
+      port: 22
+      delay: 30
+      search_regex: OpenSSH
+      connect_timeout: 10
+      sleep: 20
+    become: no
+    when: dhcp.rc == 0
+  - name: check for nginx service
+    service_facts:
+  - name: nginx config
+    include_role:
+      name: geerlingguy.nginx
+    vars:
+      nginx_yum_repo_enabled: no
+      nginx_worker_connections: 63
+      nginx_remove_default_vhost: true
+      nginx_vhosts:
+        - listen: 80
+          server_name: "repo.example.com"
+          filename: repo.example.com.conf
+          root: /var/www/repo
+          index: index.html
+          state: present
+    tags:
+      - system
+  - name: ensure repo dir
+    file:
+      path: /var/www/repo
+      state: directory
+      setype: httpd_sys_content_t
+
+  - name: copy kickstart files
+    template:
+      src: server.ks.j2
+      dest: "/var/www/repo/{{item.name}}.ks"
+      setype: httpd_sys_content_t
+      owner: root
+      mode: 0644
+    loop: "{{workshop_virtuals}}"
+    tags:
+      - system
+  - name: grow /tmp
+    lvol:
+      lv: tmp
+      size: 5G
+      vg: system
+      resizefs: true
+  - name: grow /var
+    lvol:
+      lv: var
+      vg: system
+      size: 25G
+      resizefs: true
+  - name: copy the iso
+    copy:
+      src: CentOS-7-x86_64-DVD-1804.iso
+      dest:  /var/lib/libvirt/images/CentOS-7-x86_64-DVD-1804.iso
+  - name: check for iso
+    stat:
+      checksum_algorithm: sha256
+      path: /var/lib/libvirt/images/CentOS-7-x86_64-DVD-1804.iso
+    register: iso
+  - name: fetch centos full
+    get_url:
+      dest: /var/lib/libvirt/images/
+      url: "{{workshop_centos_iso_url}}"
+      checksum: "sha256:{{workshop_iso_checksum}}"
+      tmp_dest: /var/lib/libvirt/images
+    tags:
+      - system
+    when: not iso.stat.exists or iso.stat.checksum != "{{workshop_iso_checksum}}"
+  - name: list networks
+    virt_net:
+      command: list_nets
+    register: virtnets
+    tags:
+      - hypervisor
+  - name: define the hostonly network if it has not been defined before
+    virt_net:
+      command: define
+      name: hostonly
+      xml: '{{lookup("template", "libvirt_hostnet.xml.j2") }}'
+    when: "'hostonly' not in virtnets.list_nets"
+    register: virtnet_define
+    tags:
+      - hypervisor
+  - name: get the status of the network
+    virt_net:
+      command: status
+      name: hostonly
+    register: net_status
+    when: virtnet_define is succeeded or 'hostonly' in virtnets.list_nets
+    tags:
+      - hypervisor
+  - name: start the network
+    virt_net:
+      name: hostonly
+      command: start
+    when: net_status.status == "inactive"
+    tags:
+      - hypervisor
+  - name: ensure autostart of the network
+    virt_net:
+      autostart: yes
+      name: hostonly
+    tags:
+      - hypervisor
+  - name: get volumes
+    command: virsh -c qemu:///system vol-list --pool default
+    register: volume_list
+    changed_when: no
+    ignore_errors: yes
+  - name: add http service
+    firewalld:
+      zone: public
+      service: http
+      immediate: yes
+      permanent: yes
+      state: enabled
+    tags:
+      - network
+  - name: list virtuals
+    virt:
+      command: list_vms
+    register: vmlist
+    tags:
+      - virtual
+  - name: install virtual
+    command: "virt-install --connect qemu:///system --name {{item.name}} --ram {{item.memoryMB}} --disk size={{item.diskgb}},pool=default --vcpus {{item.numcpu}} --os-type linux --os-variant CentOS7.0 --network network=default,model=virtio --network network=hostonly,model=virtio -l /var/lib/libvirt/images/CentOS-7-x86_64-DVD-1804.iso -x 'text ip=eth0:dhcp bootdev=eth0 ks=http://192.168.122.1/{{item.name}}.ks dns=192.168.122.1'"
+    loop: "{{workshop_virtuals}}"
+    when: 'item.name not in vmlist.list_vms'
+    tags:
+      - virtual
+    register: provision
+    async: 3600
+    poll: 0
+  - debug:
+      var: provision
+  - name: wait for provisioning to be complete
+    async_status:
+      jid: "{{ item.ansible_job_id}}"
+    register: prov_results
+    until: prov_results.finished
+    retries: 300
+    loop: "{{provision.results}}"
+    when: not ( item.skipped is defined )
+    tags:
+      - virtual
+  - name: get IP addresses
+    shell:  'for mac in `virsh domiflist {{item}} |grep -o -E "([0-9a-f]{2}:){5}([0-9a-f]{2})"` ; do arp -e |grep $mac  |grep -o -P "^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}" ; done'
+    register: serverips
+    ignore_errors: yes
+    loop: "{{workshop_virtuals|map(attribute='name')|list}}"
+    tags:
+      - virtual
+    changed_when: no
+  - name: add vm's to hosts file
+    lineinfile:
+      regexp: '{{item.name}}\.example\.com$'
+      line: "{{item.ip}}  {{item.name}}  {{item.name}}.example.com"
+      state: present
+      path: /etc/hosts
+    loop: "{{ workshop_virtuals }}"
+    tags:
+      - virtual
+  - name: copy Desktop files
+    copy:
+      dest: /home/student/Desktop
+      src: desktop/
+      owner: student
+      mode: 0755

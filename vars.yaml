@@ -1,0 +1,67 @@
+---
+workshop_epel_base_url: "http://mirror.i3d.net/pub/fedora-epel/7/x86_64/"
+workshop_centos_iso_url: "http://mirror.i3d.net/pub/centos/7.5.1804/isos/x86_64/CentOS-7-x86_64-DVD-1804.iso"
+workshop_iso_checksum: "506e4e06abf778c3435b4e5745df13e79ebfc86565d7ea1e128067ef6b5a6345"
+workshop_virtuals:
+  - name: server1
+    memoryMB: 2048
+    numcpu: 2
+    diskgb: 10
+    ip: 192.168.253.10
+    prefix: 24
+  - name: server2
+    memoryMB: 2048
+    numcpu: 2
+    diskgb: 10
+    ip: 192.168.253.20
+    prefix: 24
+workshop_packagelist:
+  - net-tools
+  - lightdm
+  - xfce4-session
+  - glx-utils
+  - mesa-dri-drivers
+  - plymouth-system-theme
+  - spice-vdagent
+  - xorg-x11-drivers
+  - xorg-x11-server-Xorg
+  - xorg-x11-utils
+  - xvattr
+  - tigervnc-server
+  - xrdp
+  - xfdesktop
+  - xfce4-terminal
+  - urw-fonts
+  - wine-system-fonts
+  - xorg-x11-font-utils
+  - xorg-x11-fonts-100dpi
+  - xorg-x11-fonts-75dpi
+  - xorg-x11-fonts-ISO8859-1-100dpi
+  - xorg-x11-fonts-ISO8859-1-75dpi
+  - xorg-x11-fonts-ISO8859-14-100dpi
+  - xorg-x11-fonts-ISO8859-14-75dpi
+  - xorg-x11-fonts-ISO8859-15-100dpi
+  - xorg-x11-fonts-ISO8859-15-75dpi
+  - xorg-x11-fonts-ISO8859-2-100dpi
+  - xorg-x11-fonts-ISO8859-2-75dpi
+  - xorg-x11-fonts-ISO8859-9-100dpi
+  - xorg-x11-fonts-ISO8859-9-75dpi
+  - xorg-x11-fonts-Type1
+  - xorg-x11-fonts-misc
+  - lightdm-settings
+  - google-chrome-stable
+  - kvm
+  - qemu-kvm
+  - xauth
+  - dejavu-lgc-sans-fonts
+  - virt-manager
+  - libvirt
+  - libvirt-python
+  - libvirt-client
+  - virt-viewer
+  - python-lxml
+  - bind-utils
+  - bridge-utils
+  - virt-install
+  - nginx
+

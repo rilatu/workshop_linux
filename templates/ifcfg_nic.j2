@@ -1,0 +1,8 @@
+# {{ansible_managed}}
+DEVICE="{{ansible_default_ipv4.interface}}"
+HWADDR="{{ansible_default_ipv4.macaddress}}"
+ONBOOT=yes
+BOOTPROTO=static
+IPADDR="{{ansible_default_ipv4.address}}"
+NETMASK="{{ansible_default_ipv4.netmask}}"
+GATEWAY="{{ansible_default_ipv4.gateway}}"

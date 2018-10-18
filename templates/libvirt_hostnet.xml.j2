@@ -1,0 +1,20 @@
+<network ipv6='no' >
+  <name>hostonly</name>
+  <bridge name="intbr0" delay='0' stp="on" macTableManager="libvirt"/>
+  <ip address="192.168.253.1" netmask="255.255.255.0" localPtr="yes">
+  </ip>
+  <domain name="example.com" localOnly="yes"/>
+  <dns forwardPlainNames='no'>
+    <forwarder domain='example.com'/>
+    <host ip='192.168.253.10'>
+      <hostname>server1</hostname>
+    </host>
+    <host ip='192.168.253.20'>
+      <hostname>server2</hostname>
+    </host>
+    <host ip='192.168.253.1'>
+      <hostname>repo</hostname>
+      <hostname>master</hostname>
+    </host>
+  </dns>
+</network>

@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=server1 console
+Comment=Starts a console session
+Exec=virt-viewer -c qemu:///system server1
+Icon=virt-viewer
+Path=~/
+Terminal=false
+StartupNotify=false
+

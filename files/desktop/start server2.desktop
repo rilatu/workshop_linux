@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=start server2
+Comment=Starts server2
+Exec=virsh -c qemu:///system start server2
+Icon=virt-viewer
+Path=~/
+Terminal=false
+StartupNotify=false
+

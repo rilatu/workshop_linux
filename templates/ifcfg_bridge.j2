@@ -1,0 +1,9 @@
+# {{ansible_managed}}
+DEVICE="virbr0"
+TYPE=Bridge
+ONBOOT=yes
+BOOTPROTO=static
+IPADDR="{{ansible_default_ipv4.address}}"
+NETMASK="{{ansible_default_ipv4.netmask}}"
+GATEWAY="{{ansible_default_ipv4.gateway}}"
+
