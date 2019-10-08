@@ -1,7 +1,7 @@
 ---
 workshop_epel_base_url: "http://mirror.i3d.net/pub/fedora-epel/7/x86_64/"
-workshop_centos_iso_url: "https://ams.edge.kernel.org/centos/7/isos/x86_64/CentOS-7-x86_64-Minimal-1908.iso"
-workshop_iso_checksum: "9a2c47d97b9975452f7d582264e9fc16d108ed8252ac6816239a3b58cef5c53d"
+workshop_centos_iso_url: "https://ams.edge.kernel.org/centos/7/isos/x86_64/CentOS-7-x86_64-DVD-1908.iso"
+workshop_iso_checksum: "9bba3da2876cb9fcf6c28fb636bcbd01832fe6d84cd7445fa58e44e569b3b4fe"
 second_disk: yes
 workshop_virtuals:
   - name: server1
