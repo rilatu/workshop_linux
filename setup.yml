@@ -3,6 +3,27 @@
     - vars.yaml
   become: yes
   tasks:
+  - name: configure second disk
+    lvg:
+      pvs: /dev/sda2,/dev/sdb
+      vg: system
+  - name: grow var volume
+    lvol:
+      lv: var
+      vg: system
+      resizefs: yes
+      size: 100%FREE
+    ignore_errors: true
+  - name: create a filesystem
+    filesystem:
+      dev: /dev/mapper/system-var
+      fstype: xfs
+  - name: mount var volume on /var/lib/libvirt
+    mount:
+      fstype: xfs
+      path: /var/lib/libvirt
+      src: /dev/mapper/system-var
+      state: mounted
   - name: add google repo
     yum_repository:
       name: google
@@ -26,9 +47,8 @@
       - system
   - name: install packages
     yum:
-      name: "{{item}}"
+      name: "{{ workshop_packagelist | difference(installed_pkgs) }}"
       state: present
-    loop: "{{ workshop_packagelist | difference(installed_pkgs) }}"
     tags:
       - system
   - name: drop xrdp config file
@@ -121,6 +141,11 @@
       name: net.ipv4.ip_forward
       value: 1
       reload: yes
+  - name: enable libvirt
+    service:
+      name: libvirtd
+      enabled: yes
+      state: started
   - name: reboot the server
     shell: sleep 2 && reboot
     async: 1
@@ -182,27 +207,27 @@
     loop: "{{workshop_virtuals}}"
     tags:
       - system
-  - name: grow /tmp
-    lvol:
-      lv: tmp
-      size: 5G
-      vg: system
-      resizefs: true
-  - name: grow /var
-    lvol:
-      lv: var
-      vg: system
-      size: 25G
-      resizefs: true
+#  - name: grow /tmp
+#    lvol:
+#      lv: tmp
+#      size: 5G
+#      vg: system
+#      resizefs: true
+#  - name: grow /var
+#    lvol:
+#      lv: var
+#      vg: system
+#      size: 25G
+#      resizefs: true
 #  - name: copy the iso
 #    copy:
 #      src: CentOS-7-x86_64-Minimal-1810.iso
 #      dest:  /var/lib/libvirt/images/CentOS-7-x86_64-DVD-1804.iso
-#  - name: check for iso
-#    stat:
-#      checksum_algorithm: sha256
-#      path: /var/lib/libvirt/images/CentOS-7-x86_64-DVD-1804.iso
-#    register: iso
+  - name: check for iso
+    stat:
+      checksum_algorithm: sha256
+      path: "/var/lib/libvirt/images/{{ workshop_centos_iso_url | basename }}"
+    register: iso
   - name: fetch centos full
     get_url:
       dest: /var/lib/libvirt/images/
@@ -211,7 +236,7 @@
       tmp_dest: /var/lib/libvirt/images
     tags:
       - system
-    when: not iso.stat.exists or iso.stat.checksum != "{{workshop_iso_checksum}}"
+    when: not iso.stat.exists or iso.stat.checksum != workshop_iso_checksum
   - name: list networks
     virt_net:
       command: list_nets
@@ -269,7 +294,7 @@
     tags:
       - virtual
   - name: install virtual
-    command: "virt-install --connect qemu:///system --name {{item.name}} --ram {{item.memoryMB}} --disk size={{item.diskgb}},pool=default --vcpus {{item.numcpu}} --os-type linux --os-variant CentOS7.0 --network network=default,model=virtio --network network=hostonly,model=virtio -l {{ workshop_centos_iso_url | basename }} -x 'text ip=eth0:dhcp bootdev=eth0 ks=http://192.168.122.1/{{item.name}}.ks dns=192.168.122.1'"
+    command: "virt-install --connect qemu:///system --name {{item.name}} --ram {{item.memoryMB}} --disk size={{item.diskgb}},pool=default --vcpus {{item.numcpu}} --os-type linux --os-variant CentOS7.0 --network network=default,model=virtio --network network=hostonly,model=virtio -l /var/lib/libvirt/images/{{ workshop_centos_iso_url | basename }} -x 'text ip=eth0:dhcp bootdev=eth0 ks=http://192.168.122.1/{{item.name}}.ks dns=192.168.122.1'"
     loop: "{{workshop_virtuals}}"
     when: 'item.name not in vmlist.list_vms'
     tags:
