@@ -1,0 +1,10 @@
+[all:vars]
+ansible_connection=ssh
+ansible_user=root
+ansible_ssh_pass=Managed Hosting Automation
+[workshop]
+workshop01 ansible_host=10.2.37.101 ansible_user=root
+workshop02 ansible_host=10.2.37.102 ansible_user=root
+workshop03 ansible_host=10.2.37.103 ansible_user=root
+workshop04 ansible_host=10.2.37.104 ansible_user=root
+workshop05 ansible_host=10.2.37.105 ansible_user=root
