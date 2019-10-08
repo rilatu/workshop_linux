@@ -194,15 +194,15 @@
       vg: system
       size: 25G
       resizefs: true
-  - name: copy the iso
-    copy:
-      src: CentOS-7-x86_64-DVD-1804.iso
-      dest:  /var/lib/libvirt/images/CentOS-7-x86_64-DVD-1804.iso
-  - name: check for iso
-    stat:
-      checksum_algorithm: sha256
-      path: /var/lib/libvirt/images/CentOS-7-x86_64-DVD-1804.iso
-    register: iso
+#  - name: copy the iso
+#    copy:
+#      src: CentOS-7-x86_64-Minimal-1810.iso
+#      dest:  /var/lib/libvirt/images/CentOS-7-x86_64-DVD-1804.iso
+#  - name: check for iso
+#    stat:
+#      checksum_algorithm: sha256
+#      path: /var/lib/libvirt/images/CentOS-7-x86_64-DVD-1804.iso
+#    register: iso
   - name: fetch centos full
     get_url:
       dest: /var/lib/libvirt/images/
@@ -269,7 +269,7 @@
     tags:
       - virtual
   - name: install virtual
-    command: "virt-install --connect qemu:///system --name {{item.name}} --ram {{item.memoryMB}} --disk size={{item.diskgb}},pool=default --vcpus {{item.numcpu}} --os-type linux --os-variant CentOS7.0 --network network=default,model=virtio --network network=hostonly,model=virtio -l /var/lib/libvirt/images/CentOS-7-x86_64-DVD-1804.iso -x 'text ip=eth0:dhcp bootdev=eth0 ks=http://192.168.122.1/{{item.name}}.ks dns=192.168.122.1'"
+    command: "virt-install --connect qemu:///system --name {{item.name}} --ram {{item.memoryMB}} --disk size={{item.diskgb}},pool=default --vcpus {{item.numcpu}} --os-type linux --os-variant CentOS7.0 --network network=default,model=virtio --network network=hostonly,model=virtio -l {{ workshop_centos_iso_url | basename }} -x 'text ip=eth0:dhcp bootdev=eth0 ks=http://192.168.122.1/{{item.name}}.ks dns=192.168.122.1'"
     loop: "{{workshop_virtuals}}"
     when: 'item.name not in vmlist.list_vms'
     tags:

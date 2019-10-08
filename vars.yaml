@@ -1,7 +1,7 @@
 ---
 workshop_epel_base_url: "http://mirror.i3d.net/pub/fedora-epel/7/x86_64/"
-workshop_centos_iso_url: "http://mirror.i3d.net/pub/centos/7.5.1804/isos/x86_64/CentOS-7-x86_64-DVD-1804.iso"
-workshop_iso_checksum: "506e4e06abf778c3435b4e5745df13e79ebfc86565d7ea1e128067ef6b5a6345"
+workshop_centos_iso_url: "https://ams.edge.kernel.org/centos/7/isos/x86_64/CentOS-7-x86_64-Minimal-1908.iso"
+workshop_iso_checksum: "9a2c47d97b9975452f7d582264e9fc16d108ed8252ac6816239a3b58cef5c53d"
 workshop_virtuals:
   - name: server1
     memoryMB: 2048
